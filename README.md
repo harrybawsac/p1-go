@@ -1,4 +1,3 @@
-````markdown
 # p1-go — Meter CLI
 
 Lightweight CLI to fetch readings from a P1-compatible meter (JSON endpoint), parse the payload, and persist readings into PostgreSQL.
@@ -152,7 +151,8 @@ Two options:
    - Preferred for production deployments. Example cron runs every minute.
 
 2. Internal scheduler (`--loop`)
-  - `cmd/metercli --loop` starts a ticker-based scheduler and uses a Postgres advisory lock to avoid overlapping runs. This is convenient for single-host deployments.
+
+- `cmd/metercli --loop` starts a ticker-based scheduler and uses a Postgres advisory lock to avoid overlapping runs. This is convenient for single-host deployments.
 
 Scheduler uses an advisory lock (pg_try_advisory_lock) to ensure only one runner performs work at a time.
 
