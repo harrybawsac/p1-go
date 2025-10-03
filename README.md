@@ -26,10 +26,44 @@ Run once:
 
 ## Configuration
 
-The CLI reads configuration primarily from environment variables. The current minimal run is a placeholder; later tasks will wire the following env vars into the runtime:
+The CLI supports two ways to configure runtime settings:
 
-- `METER_ENDPOINT` — HTTP endpoint of the meter (e.g. `http://192.168.101.20/api/v1/data`)
-- `DB_DSN` — Postgres DSN (e.g. `postgres://user:pass@host:5432/dbname?sslmode=disable`)
+1. JSON config file (preferred for local installs)
+2. Environment variables (fallback and common in CI/containers)
+
+## Config file (JSON)
+
+Create a JSON file (example: `config.json`) with the following fields (an example file `config.example.json` is included in the repository):
+
+```json
+{
+  "meter_endpoint": "http://192.168.101.20/api/v1/data",
+  "db_dsn": "postgres://p1:password@127.0.0.1:5432/postgres?sslmode=disable"
+}
+```
+
+Pass the config file to the CLI using `--config`:
+
+```bash
+./bin/metercli --config ./config.json
+```
+
+If `--config` is not provided, the CLI will look for `./config.json`.
+
+## Environment variables (fallback)
+
+You can also configure the runtime via environment variables. These are used if present and are also set by the CLI after loading a config file for compatibility with existing code paths:
+
+- `METER_ENDPOINT` — HTTP endpoint of the meter
+- `DB_DSN` — Postgres DSN
+
+Example using env vars directly:
+
+```bash
+export METER_ENDPOINT="http://192.168.101.20/api/v1/data"
+export DB_DSN="postgres://p1:password@127.0.0.1:5432/postgres?sslmode=disable"
+./bin/metercli
+```
 
 ## Migrations
 
