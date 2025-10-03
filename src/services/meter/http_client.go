@@ -2,7 +2,7 @@ package meter
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 )
@@ -18,5 +18,5 @@ func GetMeterJSON(ctx context.Context, endpoint string, timeout time.Duration) (
 		return nil, err
 	}
 	defer resp.Body.Close()
-	return ioutil.ReadAll(resp.Body)
+	return io.ReadAll(resp.Body)
 }

@@ -1,0 +1,51 @@
+CREATE SCHEMA IF NOT EXISTS p1;
+
+CREATE TABLE IF NOT EXISTS p1.meter_readings (
+	id BIGSERIAL PRIMARY KEY,
+	unique_id TEXT UNIQUE NOT NULL,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+	wifi_ssid TEXT,
+	wifi_strength INT,
+	smr_version INT,
+	meter_model TEXT,
+	active_tariff INT,
+	total_power_import_kwh NUMERIC(14, 3),
+	total_power_import_t1_kwh NUMERIC(14, 3),
+	total_power_import_t2_kwh NUMERIC(14, 3),
+	total_power_export_kwh NUMERIC(14, 3),
+	total_power_export_t1_kwh NUMERIC(14, 3),
+	total_power_export_t2_kwh NUMERIC(14, 3),
+	active_power_w NUMERIC(14, 3),
+	active_power_l1_w NUMERIC(14, 3),
+	active_power_l2_w NUMERIC(14, 3),
+	active_power_l3_w NUMERIC(14, 3),
+	active_voltage_l1_v NUMERIC(14, 3),
+	active_voltage_l2_v NUMERIC(14, 3),
+	active_voltage_l3_v NUMERIC(14, 3),
+	active_current_a NUMERIC(14, 3),
+	active_current_l1_a NUMERIC(14, 3),
+	active_current_l2_a NUMERIC(14, 3),
+	active_current_l3_a NUMERIC(14, 3),
+	voltage_sag_l1_count INT,
+	voltage_sag_l2_count INT,
+	voltage_sag_l3_count INT,
+	voltage_swell_l1_count INT,
+	voltage_swell_l2_count INT,
+	voltage_swell_l3_count INT,
+	any_power_fail_count INT,
+	long_power_fail_count INT,
+	total_gas_m3 NUMERIC(14, 3),
+	gas_timestamp BIGINT,
+	gas_unique_id TEXT
+);
+
+CREATE TABLE IF NOT EXISTS p1.external_readings (
+	id BIGSERIAL PRIMARY KEY,
+	meter_reading_unique_id TEXT NOT NULL REFERENCES p1.meter_readings(unique_id) ON DELETE CASCADE,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+	unique_id TEXT,
+	type TEXT,
+	timestamp BIGINT,
+	value NUMERIC(14, 3),
+	unit TEXT
+);
