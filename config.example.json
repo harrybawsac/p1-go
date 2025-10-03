@@ -1,4 +1,4 @@
 {
   "meter_endpoint": "http://192.168.101.20/api/v1/data",
-  "db_dsn": "host=127.0.0.1 port=5432 user=p1 password='password' dbname=postgres sslmode=disable"
+  "db_dsn": "host=127.0.0.1 port=5432 user=p1 password='password' dbname=postgres sslmode=disable options='-c search_path=p1'"
 }
