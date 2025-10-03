@@ -1,50 +1,140 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# <!--
+
+# Sync Impact Report
+
+# Version change: none -> 1.0.0
+
+# Modified principles:
+
+# - Added: I. Code Quality & Maintainability
+
+# - Added: II. Test-First Discipline (NON-NEGOTIABLE)
+
+# - Added: III. User Experience Consistency
+
+# - Added: IV. Performance & Resource Constraints
+
+# - Added: V. Observability, Logging, and Diagnostics
+
+# Added sections:
+
+# - Additional Constraints
+
+# - Development Workflow & Quality Gates
+
+# Removed sections:
+
+# - None (template placeholders replaced)
+
+# Templates requiring updates:
+
+# - .specify/templates/plan-template.md ✅ updated (version reference)
+
+# - .specify/templates/spec-template.md ⚠ pending (contains generic placeholders)
+
+# - .specify/templates/tasks-template.md ⚠ pending (contains generic placeholders)
+
+# - .specify/templates/agent-file-template.md ⚠ pending (DATE placeholder)
+
+# Follow-up TODOs:
+
+# - TODO(RATIFICATION_DATE): determine and record the original ratification date
+
+# - Review `.specify/templates/*.md` to remove or align leftover bracketed placeholders
+
+# -->
+
+# p1-go Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Code Quality & Maintainability
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+All code MUST be clear, well-structured, and reviewed. Contributors MUST follow the
+project's style and linting rules; where a style guide is not explicit, aim for
+readability and minimal surprising behavior. Code changes MUST include unit tests
+covering logic branches and edge cases. Large or risky changes MUST include a
+design note explaining trade-offs and migration steps.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+Rationale: High-quality, well-documented code reduces long-term maintenance
+costs and makes reviews effective and fast.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. Test-First Discipline (NON-NEGOTIABLE)
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+All new features and bug fixes MUST start with failing tests: unit tests for
+logic, contract tests for external interfaces, and integration tests for
+cross-component behavior. Tests are first-class artifacts and MUST be merged
+with the code they validate. Test suites MUST run in CI and be kept fast enough
+for routine developer feedback.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Rationale: TDD ensures correctness, prevents regressions, and clarifies
+requirements through executable examples.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### III. User Experience Consistency
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+End-user interactions (CLI, API, or UI) MUST be predictable, documented, and
+consistent across the project. Public-facing behavior (flags, endpoints,
+output formats) MUST maintain backward compatibility unless a documented,
+versioned breaking change is proposed and approved. Error messages MUST be
+actionable and surfaced with appropriate status codes or exit codes.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+Rationale: Consistent UX reduces cognitive load for users and integrators and
+lowers support costs.
+
+### IV. Performance & Resource Constraints
+
+Performance goals and resource budgets MUST be defined for features with
+non-trivial operational cost. Where applicable, targets (e.g., p95 latency,
+throughput, memory footprint) MUST be stated in the spec and validated by
+benchmarks or load tests before release. Optimizations MUST be justified by
+measurements and accompanied by regression tests.
+
+Rationale: Early performance constraints avoid late-stage redesigns and ensure
+the product meets user expectations at scale.
+
+### V. Observability, Logging, and Diagnostics
+
+All services and critical libraries MUST emit structured logs and metrics for
+errors, key state transitions, and performance indicators. Logs MUST include
+correlation identifiers where cross-cutting flows exist. Public tools MUST
+provide a `--verbose` or `--debug` mode that increases diagnostic output
+without changing normal behavior.
+
+Rationale: Observability is essential for diagnosing production issues and for
+measuring adherence to other principles (testing, performance).
+
+## Additional Constraints
+
+- Technology choices SHOULD prefer widely supported, well-maintained tooling
+  and libraries. New dependencies MUST be justified in the spec with security
+  and maintenance considerations.
+- Security-sensitive changes MUST include threat analysis and automated checks
+  where possible (e.g., static analysis, dependency scanning).
+- Accessibility and internationalization are encouraged where user-facing
+  features warrant them; include accessibility acceptance criteria in such
+  specs.
+
+## Development Workflow & Quality Gates
+
+- All contributions MUST go through pull requests and at least one approval from
+  a maintainer. Major changes (new public APIs, schema changes, or infra
+  additions) REQUIRE a design document and two approvals.
+- CI MUST run linting, unit tests, contract tests, and basic integration tests
+  on every PR. Failures MUST be resolved before merging.
+- Release notes for any public or versioned change MUST document behavioral
+  changes, migration steps, and performance implications.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+Amendments to this constitution MUST be proposed in a pull request that:
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+- Explains the change and reasoning, including any compatibility impacts.
+- Specifies the intended version bump (MAJOR, MINOR, PATCH) and justification.
+- Includes a migration plan for any breaking changes and updates to templates
+  and runtime guidance.
+
+Constitution compliance is verified during planning (`/plan`) and enforced by
+CI checks where practical. Exceptions to these principles require explicit
+approval and a documented rationale in the PR.
+
+**Version**: 1.0.0 | **Ratified**: 2025-10-03 | **Last Amended**: 2025-10-03
