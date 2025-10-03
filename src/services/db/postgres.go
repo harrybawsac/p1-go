@@ -59,36 +59,29 @@ func (p *PostgresAdapter) InsertReading(ctx context.Context, r models.Reading, e
 		ph[i] = fmt.Sprintf("$%d", i+1)
 	}
 
-	// build update assignments for ON CONFLICT — do not overwrite created_at on update
-	updates := make([]string, 0, len(cols)-2)
-	for _, c := range cols {
-		if c == "unique_id" || c == "created_at" {
-			continue
-		}
-		updates = append(updates, fmt.Sprintf("%s = EXCLUDED.%s", c, c))
-	}
+	// Insert a new meter_readings row and return its id
+	insert := fmt.Sprintf("INSERT INTO p1.meter_readings (%s) VALUES (%s) RETURNING id",
+		strings.Join(cols, ", "), strings.Join(ph, ","))
 
-	upsert := fmt.Sprintf("INSERT INTO p1.meter_readings (%s) VALUES (%s) ON CONFLICT (unique_id) DO UPDATE SET %s",
-		strings.Join(cols, ", "), strings.Join(ph, ","), strings.Join(updates, ", "))
-
-	_, err = tx.ExecContext(ctx, upsert, args...)
-	if err != nil {
+	var readingID int64
+	if err := tx.QueryRowContext(ctx, insert, args...).Scan(&readingID); err != nil {
 		tx.Rollback()
-		return fmt.Errorf("upsert reading: %w", err)
+		return fmt.Errorf("insert reading: %w", err)
 	}
 
-	// replace external readings for this meter_unique_id
+	// append external readings referencing the new reading id
 	if len(externals) > 0 {
-		if _, err := tx.ExecContext(ctx, "DELETE FROM p1.external_readings WHERE meter_reading_unique_id = $1", r.UniqueID); err != nil {
-			tx.Rollback()
-			return fmt.Errorf("delete externals: %w", err)
-		}
-		// created_at for external_readings will be set by the DB default (now())
-		stmt := "INSERT INTO p1.external_readings (meter_reading_unique_id, unique_id, type, timestamp, value, unit) VALUES ($1,$2,$3,$4,$5,$6)"
+		// try the new schema first (meter_reading_id fk)
+		stmt := "INSERT INTO p1.external_readings (meter_reading_id, unique_id, type, timestamp, value, unit) VALUES ($1,$2,$3,$4,$5,$6)"
 		for _, e := range externals {
-			if _, err := tx.ExecContext(ctx, stmt, r.UniqueID, e.UniqueID, e.Type, e.Timestamp, e.Value, e.Unit); err != nil {
-				tx.Rollback()
-				return fmt.Errorf("insert external: %w", err)
+			if _, err := tx.ExecContext(ctx, stmt, readingID, e.UniqueID, e.Type, e.Timestamp, e.Value, e.Unit); err != nil {
+				// if insert fails (maybe older schema expects meter_reading_unique_id), attempt fallback
+				// fallback: insert using meter_reading_unique_id column
+				fallback := "INSERT INTO p1.external_readings (meter_reading_unique_id, unique_id, type, timestamp, value, unit) VALUES ($1,$2,$3,$4,$5,$6)"
+				if _, ferr := tx.ExecContext(ctx, fallback, r.UniqueID, e.UniqueID, e.Type, e.Timestamp, e.Value, e.Unit); ferr != nil {
+					tx.Rollback()
+					return fmt.Errorf("insert external (both schemas tried): %w / %v", err, ferr)
+				}
 			}
 		}
 	}
