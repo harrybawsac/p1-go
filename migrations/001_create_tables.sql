@@ -2,7 +2,7 @@ CREATE SCHEMA IF NOT EXISTS p1;
 
 CREATE TABLE IF NOT EXISTS p1.meter_readings (
 	id BIGSERIAL PRIMARY KEY,
-	unique_id TEXT UNIQUE NOT NULL,
+	unique_id TEXT NOT NULL,
 	created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 	wifi_ssid TEXT,
 	wifi_strength INT,
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS p1.meter_readings (
 
 CREATE TABLE IF NOT EXISTS p1.external_readings (
 	id BIGSERIAL PRIMARY KEY,
-	meter_reading_unique_id TEXT NOT NULL REFERENCES p1.meter_readings(unique_id) ON DELETE CASCADE,
+	meter_reading_id BIGINT NOT NULL REFERENCES p1.meter_readings(id) ON DELETE CASCADE,
 	created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 	unique_id TEXT,
 	type TEXT,
