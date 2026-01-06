@@ -19,7 +19,7 @@ func TestRunOnce_MissingEndpoint(t *testing.T) {
 	adapter := &db.PostgresAdapter{DB: nil}
 	buf := buffer.New("/tmp/p1-buffer-test.jsonl")
 
-	if err := app.RunOnceWithDeps(context.Background(), adapter, buf); err == nil {
+	if err := app.RunOnceWithDeps(context.Background(), adapter, buf, false); err == nil {
 		t.Fatalf("expected error when METER_ENDPOINT missing, got nil")
 	}
 }

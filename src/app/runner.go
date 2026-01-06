@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 )
 
 // RunOnceWithDeps performs a single fetch -> parse -> persist cycle using injected dependencies.
-func RunOnceWithDeps(ctx context.Context, adapter *db.PostgresAdapter, buf *buffer.Buffer) error {
+func RunOnceWithDeps(ctx context.Context, adapter *db.PostgresAdapter, buf *buffer.Buffer, dryRun bool) error {
 	endpoint := os.Getenv("METER_ENDPOINT")
 	if endpoint == "" {
 		return fmt.Errorf("METER_ENDPOINT not set")
@@ -37,12 +38,24 @@ func RunOnceWithDeps(ctx context.Context, adapter *db.PostgresAdapter, buf *buff
 		return err
 	}
 
-	r, externals, err := parser.ParseFullReading(body)
+	r, err := parser.ParseFullReading(body)
 	if err != nil {
 		return err
 	}
 
-	if err := adapter.InsertReading(ctx, r, externals); err != nil {
+	if dryRun {
+		// In dry-run mode, just log the parsed reading
+		var pretty bytes.Buffer
+		if err := json.Indent(&pretty, body, "", "  "); err != nil {
+			fmt.Printf("[DRY RUN] Fetched data (raw): %s\n", string(body))
+		} else {
+			fmt.Printf("[DRY RUN] Fetched data:\n%s\n", pretty.String())
+		}
+		fmt.Printf("[DRY RUN] Parsed reading: %+v\n", r)
+		return nil
+	}
+
+	if err := adapter.InsertReading(ctx, r); err != nil {
 		// buffer raw payload for retry
 		if berr := buf.Append(json.RawMessage(body)); berr != nil {
 			return fmt.Errorf("insert failed: %v; buffer append failed: %v", err, berr)

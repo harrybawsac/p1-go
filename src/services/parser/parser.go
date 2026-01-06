@@ -23,29 +23,14 @@ func ParseMeterJSON(data []byte) (MeterPayload, error) {
 	return p, nil
 }
 
-// ParseFullReading parses the complete meter JSON payload into a Reading and external readings
-func ParseFullReading(data []byte) (models.Reading, []models.ExternalReading, error) {
+// ParseFullReading parses the complete meter JSON payload into a Reading
+func ParseFullReading(data []byte) (models.Reading, error) {
 	var raw map[string]interface{}
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return models.Reading{}, nil, err
+		return models.Reading{}, err
 	}
 
 	r := models.Reading{}
-	if v, ok := raw["unique_id"].(string); ok {
-		r.UniqueID = v
-	}
-	if v, ok := raw["wifi_ssid"].(string); ok {
-		r.WifiSSID = v
-	}
-	if v, ok := raw["wifi_strength"].(float64); ok {
-		r.WifiStrength = int(v)
-	}
-	if v, ok := raw["smr_version"].(float64); ok {
-		r.SmrVersion = int(v)
-	}
-	if v, ok := raw["meter_model"].(string); ok {
-		r.MeterModel = v
-	}
 	if v, ok := raw["active_tariff"].(float64); ok {
 		r.ActiveTariff = int(v)
 	}
@@ -85,35 +70,6 @@ func ParseFullReading(data []byte) (models.Reading, []models.ExternalReading, er
 	if v, ok := raw["gas_timestamp"].(float64); ok {
 		r.GasTimestamp = int64(v)
 	}
-	if v, ok := raw["gas_unique_id"].(string); ok {
-		r.GasUniqueID = v
-	}
 
-	var externals []models.ExternalReading
-	if arr, ok := raw["external"].([]interface{}); ok {
-		for _, it := range arr {
-			if m, ok := it.(map[string]interface{}); ok {
-				er := models.ExternalReading{}
-				if v, ok := m["unique_id"].(string); ok {
-					er.UniqueID = v
-				}
-				if v, ok := m["type"].(string); ok {
-					er.Type = v
-				}
-				if v, ok := m["timestamp"].(float64); ok {
-					er.Timestamp = int64(v)
-				}
-				er.Value = 0
-				if v, ok := m["value"].(float64); ok {
-					er.Value = v
-				}
-				if v, ok := m["unit"].(string); ok {
-					er.Unit = v
-				}
-				externals = append(externals, er)
-			}
-		}
-	}
-
-	return r, externals, nil
+	return r, nil
 }

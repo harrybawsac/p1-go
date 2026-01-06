@@ -15,7 +15,7 @@ This README shows how to build, configure, run, test, and troubleshoot the CLI.
 
 ## Requirements
 
-- Go 1.20+ (module-aware)
+- Go 1.24+ (module-aware)
 - PostgreSQL for persistence
 - Optional: Docker (for running Postgres during integration tests)
 
@@ -52,7 +52,7 @@ This README shows how to build, configure, run, test, and troubleshoot the CLI.
 
 ## Requirements
 
-- Go 1.20+ (module-aware)
+- Go 1.24+ (module-aware)
 - PostgreSQL for persistence
 - Optional: Docker (for running Postgres during integration tests)
 
@@ -107,6 +107,7 @@ export DB_DSN="host=127.0.0.1 port=5432 user=p1 password='secret' dbname=postgre
 - `--loop` — run continuously using the internal scheduler.
 - `--interval <seconds>` — interval for scheduler loop (default 60).
 - `--drain-buffer` — drain the on-disk buffer (`/tmp/p1-buffer.jsonl` by default) and attempt to persist entries.
+- `--dry-run` — fetch and log meter data without inserting into the database (useful for testing and debugging).
 
 Example: run continuously every 60s:
 
@@ -120,14 +121,27 @@ Drain buffer manually:
 ./bin/metercli --config ./config.json --drain-buffer
 ```
 
+Test meter endpoint without database insertion (dry-run):
+
+```bash
+./bin/metercli --config ./config.json --dry-run
+```
+
 ## Database & Migrations
 
-Schema and tables are defined in `migrations/001_create_tables.sql`. To apply the migration using `psql`:
+Schema and tables are defined in `migrations/`. Apply migrations in order using `psql`:
 
 ```bash
 # as a user with privileges to create schema/tables
 psql "host=127.0.0.1 port=5432 user=postgres dbname=postgres" -f migrations/001_create_tables.sql
+psql "host=127.0.0.1 port=5432 user=postgres dbname=postgres" -f migrations/002_drop_external_readings.sql
+psql "host=127.0.0.1 port=5432 user=postgres dbname=postgres" -f migrations/003_drop_columns.sql
 ```
+
+**Migration history:**
+- `001_create_tables.sql` — Initial schema with `p1.meter_readings` table
+- `002_drop_external_readings.sql` — Removes the `external_readings` table (no longer needed)
+- `003_drop_columns.sql` — Removes deprecated columns: `unique_id`, `wifi_ssid`, `wifi_strength`, `smr_version`, `meter_model`, `gas_unique_id`
 
 If your application user only has access to schema `p1`, include `options='-c search_path=p1'` in the DSN or qualify table names in SQL.
 

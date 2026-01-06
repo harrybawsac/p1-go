@@ -5,12 +5,7 @@ import "time"
 // Reading represents a flattened meter reading matching p1.meter_readings
 type Reading struct {
 	ID                    int64     `db:"id"`
-	UniqueID              string    `db:"unique_id"`
 	CreatedAt             time.Time `db:"created_at"`
-	WifiSSID              string    `db:"wifi_ssid"`
-	WifiStrength          int       `db:"wifi_strength"`
-	SmrVersion            int       `db:"smr_version"`
-	MeterModel            string    `db:"meter_model"`
 	ActiveTariff          int       `db:"active_tariff"`
 	TotalPowerImportKwh   float64   `db:"total_power_import_kwh"`
 	TotalPowerImportT1Kwh float64   `db:"total_power_import_t1_kwh"`
@@ -39,17 +34,4 @@ type Reading struct {
 	LongPowerFailCount    int       `db:"long_power_fail_count"`
 	TotalGasM3            float64   `db:"total_gas_m3"`
 	GasTimestamp          int64     `db:"gas_timestamp"`
-	GasUniqueID           string    `db:"gas_unique_id"`
-}
-
-// ExternalReading represents entries in p1.external_readings
-type ExternalReading struct {
-	ID                   int64     `db:"id"`
-	MeterReadingUniqueID string    `db:"meter_reading_unique_id"`
-	CreatedAt            time.Time `db:"created_at"`
-	UniqueID             string    `db:"unique_id"`
-	Type                 string    `db:"type"`
-	Timestamp            int64     `db:"timestamp"`
-	Value                float64   `db:"value"`
-	Unit                 string    `db:"unit"`
 }
