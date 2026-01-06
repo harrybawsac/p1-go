@@ -78,12 +78,14 @@ Supported fields:
 
 - `meter_endpoint` (string) — HTTP URL to fetch the meter JSON payload.
 - `db_dsn` (string) — Postgres DSN. Use the lib/pq key=value form to avoid URL-encoding issues for passwords with special characters. You can also add `options='-c search_path=p1'` if the DB user only has access to the `p1` schema.
+- `data_dir` (string) — Directory containing CSV export files for bulk import (default `./data`).
 
 Example `config.json`:
 
 ```json
 {
-  "meter_endpoint": "http://192.168.101.20/api/v1/data",
+  "meter_endpoint": "http://192.168.101.20/api/v1/data",,
+  "data_dir": "./data"
   "db_dsn": "host=127.0.0.1 port=5432 user=p1 password='secret' dbname=postgres sslmode=disable options='-c search_path=p1'"
 }
 ```
@@ -106,7 +108,8 @@ export DB_DSN="host=127.0.0.1 port=5432 user=p1 password='secret' dbname=postgre
 - `--config <path>` — path to JSON config file (default `./config.json`).
 - `--loop` — run continuously using the internal scheduler.
 - `--interval <seconds>` — interval for scheduler loop (default 60).
-- `--drain-buffer` — drain the on-disk buffer (`/tmp/p1-buffer.jsonl` by default) and attempt to persist entries.
+- `--drain-buffer` — drain the on-disk buffer (`/tmp/p1-buffer.jsonl` by default) and attempt to persist entries
+- `--import` — bulk import historical data from CSV files exported from the Home Wizard app..
 - `--dry-run` — fetch and log meter data without inserting into the database (useful for testing and debugging).
 
 Example: run continuously every 60s:
@@ -125,7 +128,62 @@ Test meter endpoint without database insertion (dry-run):
 
 ```bash
 ./bin/metercli --config ./config.json --dry-run
+```Importing Historical Data
+
+The CLI supports bulk importing historical meter data from CSV files exported from the Home Wizard app. The import process merges power and gas data from separate CSV files and inserts them day-by-day into the database.
+
+### CSV Export from Home Wizard
+
+Export your data from the Home Wizard app:
+1. Open the Home Wizard app
+2. Navigate to the export/backup section
+3. Export your power and gas usage data as CSV files
+4. Place the exported `power-15m.csv` and `gas-15m.csv` files in the `data_dir` directory (default: `./data`)
+
+### CSV Format
+
+The CSV files must have the following structure:
+
+**power-15m.csv:**
 ```
+time,import T1,import T2,export T1,export T2,L1 max W,L2 max W,L3 max W
+2025-06-02 20:30:00,8293.146,7210.113,1916.077,4181.422,173,1212,67
+```
+
+**gas-15m.csv:**
+```
+time,total gas
+2025-06-02 20:30:00,3488.524
+```
+
+The timestamps in both files must be aligned (matching rows). The import process merges them in-memory based on timestamp.
+
+### Running the Import
+
+Import data with database insertion:
+
+```bash
+./bin/metercli --config ./config.json --import
+```
+
+Preview SQL statements for the first 2 days without inserting (dry-run):
+
+```bash
+./bin/metercli --config ./config.json --import --dry-run
+```
+
+The import process:
+- Loads and validates both CSV files
+- Merges power and gas data by timestamp
+- Groups readings by day
+- Inserts all readings for each day using a single multi-row INSERT statement
+- In dry-run mode, prints the SQL for the first 2 days only
+
+### Import Performance
+
+The import uses optimized multi-row INSERT statements, inserting all readings for a given day in a single database round-trip. For example, a day with 96 readings is inserted with one SQL statement instead of 96 separate INSERTs, significantly improving performance for large datasets.
+
+## 
 
 ## Database & Migrations
 

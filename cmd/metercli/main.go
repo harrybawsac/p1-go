@@ -5,14 +5,18 @@ import (
 	"database/sql"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/harrybawsac/p1-go/src/app"
 	"github.com/harrybawsac/p1-go/src/buffer"
 	"github.com/harrybawsac/p1-go/src/config"
+	"github.com/harrybawsac/p1-go/src/models"
 	"github.com/harrybawsac/p1-go/src/scheduler"
+	"github.com/harrybawsac/p1-go/src/services/csvloader"
 	"github.com/harrybawsac/p1-go/src/services/db"
 	"github.com/harrybawsac/p1-go/src/services/parser"
 	_ "github.com/lib/pq"
@@ -25,6 +29,7 @@ func main() {
 	interval := flag.Int("interval", 60, "interval in seconds when running in loop mode")
 	drain := flag.Bool("drain-buffer", false, "drain local buffer and attempt to persist entries")
 	dryRun := flag.Bool("dry-run", false, "fetch and log data without inserting into database")
+	importCSV := flag.Bool("import", false, "import CSV files from data directory")
 	flag.Parse()
 
 	log.Println("metercli starting")
@@ -54,6 +59,14 @@ func main() {
 
 	adapter := &db.PostgresAdapter{DB: dbConn}
 	buf := buffer.New("/tmp/p1-buffer.jsonl")
+
+	if *importCSV {
+		if err := importCSVData(ctx, cfg, adapter, *dryRun); err != nil {
+			log.Fatalf("import CSV failed: %v", err)
+		}
+		log.Println("import completed")
+		return
+	}
 
 	if *drain {
 		if err := buf.Drain(ctx, func(ctx context.Context, raw json.RawMessage) error {
@@ -85,6 +98,81 @@ func main() {
 		}
 	}
 	log.Println("run completed")
+}
+
+// importCSVData loads CSV files and imports them into the database day-by-day
+func importCSVData(ctx context.Context, cfg config.Config, adapter *db.PostgresAdapter, dryRun bool) error {
+	if cfg.DataDir == "" {
+		return fmt.Errorf("data_dir not configured")
+	}
+
+	loader := &csvloader.CSVLoader{DataDir: cfg.DataDir}
+
+	log.Printf("Loading CSV files from %s...\n", cfg.DataDir)
+	merged, err := loader.LoadAndMerge()
+	if err != nil {
+		return fmt.Errorf("load and merge CSV: %w", err)
+	}
+	log.Printf("Loaded %d records\n", len(merged))
+
+	// Group by day
+	dayMap := csvloader.GroupByDay(merged)
+
+	// Sort days for consistent processing
+	var days []string
+	for day := range dayMap {
+		days = append(days, day)
+	}
+	sort.Strings(days)
+
+	log.Printf("Found %d days of data\n", len(days))
+
+	if dryRun {
+		// Only process first two days for dry-run
+		processCount := 2
+		if len(days) < 2 {
+			processCount = len(days)
+		}
+
+		log.Printf("Dry-run mode: generating SQL for first %d days\n", processCount)
+		for i := 0; i < processCount; i++ {
+			day := days[i]
+			dayReadings := dayMap[day]
+
+			log.Printf("\n--- Day %d: %s (%d readings) ---\n", i+1, day, len(dayReadings))
+
+			// Convert to models.Reading
+			readings := make([]models.Reading, len(dayReadings))
+			for j, mr := range dayReadings {
+				readings[j] = mr.ToReading()
+			}
+
+			// Generate SQL (single statement for all readings of the day)
+			sqlStatement := adapter.GenerateInsertSQL(readings)
+			fmt.Println(sqlStatement)
+		}
+		return nil
+	}
+
+	// Insert day by day
+	for i, day := range days {
+		dayReadings := dayMap[day]
+		log.Printf("Processing day %d/%d: %s (%d readings)\n", i+1, len(days), day, len(dayReadings))
+
+		// Convert to models.Reading
+		readings := make([]models.Reading, len(dayReadings))
+		for j, mr := range dayReadings {
+			readings[j] = mr.ToReading()
+		}
+
+		// Insert batch for this day
+		if err := adapter.InsertReadingsBatch(ctx, readings); err != nil {
+			return fmt.Errorf("insert day %s: %w", day, err)
+		}
+		log.Printf("Inserted %d readings for %s\n", len(readings), day)
+	}
+
+	return nil
 }
 
 // runOnceWithDeps performs a single fetch -> parse -> persist cycle using injected dependencies.

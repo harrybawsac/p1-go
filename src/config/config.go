@@ -9,6 +9,7 @@ import (
 type Config struct {
 	MeterEndpoint string `json:"meter_endpoint"`
 	DBDSN         string `json:"db_dsn"`
+	DataDir       string `json:"data_dir"`
 }
 
 // Load reads a JSON config file from path and unmarshals into Config
